@@ -17,8 +17,14 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/briandowns/spinner"
+	"github.com/hourglasshoro/speech-to-text-helper/pkg"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
+	"path"
+	"path/filepath"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -38,7 +44,48 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	RunE: func(cmd *cobra.Command, args []string) error {
+		currentDir, err := os.Getwd()
+		if err != nil {
+			return errors.Wrap(err, "cannot get current dir")
+		}
+
+		source := cmd.Flag("source").Value.String()
+		fileDir := Solve(source, currentDir)
+
+		output := cmd.Flag("output").Value.String()
+		outputDir := Solve(output, currentDir)
+
+		apiKey, serviceUrl, err := pkg.LoadEnv()
+		if err != nil {
+			return err
+		}
+
+		s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
+		s.Suffix = " Now requesting..."
+		s.FinalMSG = "Complete!"
+
+		s.Start()
+		err = pkg.Send(apiKey, serviceUrl, fileDir, outputDir)
+		if err != nil {
+			return err
+		}
+		s.Stop()
+
+		return nil
+	},
+}
+
+// Solve resolves the path of the root directory to be searched from the input source and currentDir
+func Solve(source string, currentDir string) (outputDir string) {
+	if source != "" && !filepath.IsAbs(source) {
+		outputDir = path.Join(currentDir, source)
+	} else if filepath.IsAbs(source) {
+		outputDir = source
+	} else {
+		outputDir = currentDir
+	}
+	return
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -59,6 +106,8 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().StringP("source", "s", "", "Directory to search")
+	rootCmd.Flags().StringP("output", "o", "", "Directory to output")
 }
 
 // initConfig reads in config file and ENV variables if set.
