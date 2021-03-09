@@ -17,17 +17,15 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/briandowns/spinner"
 	"github.com/hourglasshoro/speech-to-text-helper/pkg"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"os"
 	"path"
 	"path/filepath"
-	"time"
-
-	homedir "github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
+	"strconv"
 )
 
 var cfgFile string
@@ -56,21 +54,20 @@ to quickly create a Cobra application.`,
 		output := cmd.Flag("output").Value.String()
 		outputDir := Solve(output, currentDir)
 
+		overwrite, err := strconv.ParseBool(cmd.Flag("overwrite").Value.String())
+		if err != nil {
+			return err
+		}
+
 		apiKey, serviceUrl, err := pkg.LoadEnv()
 		if err != nil {
 			return err
 		}
 
-		s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
-		s.Suffix = " Now requesting..."
-		s.FinalMSG = "Complete!"
-
-		s.Start()
-		err = pkg.Send(apiKey, serviceUrl, fileDir, outputDir)
+		err = pkg.Send(apiKey, serviceUrl, fileDir, outputDir, overwrite)
 		if err != nil {
 			return err
 		}
-		s.Stop()
 
 		return nil
 	},
@@ -108,6 +105,7 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.Flags().StringP("source", "s", "", "Directory to search")
 	rootCmd.Flags().StringP("output", "o", "", "Directory to output")
+	rootCmd.Flags().BoolP("overwrite", "w", false, "Overwrite an already existing file or")
 }
 
 // initConfig reads in config file and ENV variables if set.
