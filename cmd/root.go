@@ -59,12 +59,17 @@ to quickly create a Cobra application.`,
 			return err
 		}
 
+		parallel, err := strconv.Atoi(cmd.Flag("parallel").Value.String())
+		if err != nil {
+			return err
+		}
+
 		apiKey, serviceUrl, err := pkg.LoadEnv()
 		if err != nil {
 			return err
 		}
 
-		err = pkg.Send(apiKey, serviceUrl, fileDir, outputDir, overwrite)
+		err = pkg.Send(apiKey, serviceUrl, fileDir, outputDir, overwrite, parallel)
 		if err != nil {
 			return err
 		}
@@ -106,6 +111,7 @@ func init() {
 	rootCmd.Flags().StringP("source", "s", "", "Directory to search")
 	rootCmd.Flags().StringP("output", "o", "", "Directory to output")
 	rootCmd.Flags().BoolP("overwrite", "w", false, "Overwrite an already existing file or")
+	rootCmd.Flags().IntP("parallel", "p", 100, "Number of goroutine")
 }
 
 // initConfig reads in config file and ENV variables if set.
